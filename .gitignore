@@ -1,0 +1,19 @@
+# Secrets: never commit
+.env
+
+# Virtual environment (can be rebuilt anytime)
+.venv/
+
+# Python and Jupyter clutter
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Mac system files
+.DS_Store
+
+# Login tokens we'll create in Phase 1
+token_cache.json
+
+# Your real emails and labeled test data stay local
+data/
