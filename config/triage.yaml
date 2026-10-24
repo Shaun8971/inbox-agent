@@ -1,0 +1,91 @@
+# =====================================================================
+# TRIAGE CONFIG: edit this file to change how the agent sorts email.
+# No code changes needed.
+# Format notes: indent with SPACES (never tabs); "#" starts a comment;
+# "- " at the start of a line is one item in a list;
+# {key: value, ...} is a compact one-line mini-table.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# 1. EXCLUSIONS: emails the agent never fetches
+# ---------------------------------------------------------------------
+excluded_labels:
+  - "[Important Documents]"   # Exact label name as shown in Gmail's left pane
+
+# ---------------------------------------------------------------------
+# 2. RULES: decided by code, so LLM call 1 is skipped
+# ---------------------------------------------------------------------
+rules:
+  # Event newsletters, matched by sender ADDRESS only (the part inside < >),
+  # because display names can change but addresses rarely do
+  event_newsletter_senders:
+    - "vox@dartmouth.edu"
+    - "graduate.student.council.webteam@dartmouth.edu"
+    - "international.student.experience@dartmouth.edu"
+    - "East.Wheelock.House@dartmouth.edu"
+
+  # Canvas: emails from this address are checked against the subject phrases below.
+  # Matching ignores capitals and checks "contains": the phrase can appear anywhere in the subject.
+  # The first type whose phrase matches wins. A Canvas email matching none goes to LLM call 1.
+  canvas_sender: "notifications@instructure.com"
+  canvas_subject_phrases:
+    canvas_due_dates:          # The summary of what's due
+      - "Recent Canvas Notifications"
+    canvas_prof_post:          # Announcements written by a professor or TA
+      - "just sent you a message in Canvas"
+    canvas_routine:            # Notices with no useful detail (check the exact wording in your subjects)
+      - "Submission Posted"
+      - "Submissions Posted"
+      - "Grade"
+      - "graded"
+
+# ---------------------------------------------------------------------
+# 3. TYPES: what each type leads to
+#   action:   act           = stays unread in inbox + Telegram ping
+#             read          = stays unread in inbox + listed in digest
+#             skip          = marked read, archived, labeled Agent/Skipped
+#             read_if_match = read if the extractor finds a matching event, otherwise skip
+#   extract:  which LLM call 2 prompt runs: none, events, due_dates, gist
+#   telegram: how it appears: ping, digest_line, digest_events, approval, count
+# ---------------------------------------------------------------------
+types:
+  # Decided by rules
+  event_newsletter:     {action: skip,          extract: events,    telegram: digest_events}
+  canvas_routine:       {action: skip,          extract: none,      telegram: count}
+  canvas_prof_post:     {action: read,          extract: gist,      telegram: digest_line}
+  canvas_due_dates:     {action: skip,          extract: due_dates, telegram: approval}
+  # Decided by LLM call 1
+  prof_ta_staff:        {action: act,           extract: none,      telegram: ping}
+  recruiting_job:       {action: act,           extract: none,      telegram: ping}
+  personal_needs_reply: {action: act,           extract: none,      telegram: ping}
+  personal_fyi:         {action: read,          extract: none,      telegram: digest_line}
+  event_invite:         {action: read_if_match, extract: events,    telegram: digest_events}
+  newsletter_ads:       {action: skip,          extract: none,      telegram: count}
+  dartmouth_notice:     {action: skip,          extract: none,      telegram: digest_line}
+  account_alert:        {action: read,          extract: none,      telegram: digest_line}
+  receipt_shipping:     {action: skip,          extract: none,      telegram: count}
+  unsure:               {action: read,          extract: none,      telegram: digest_line}
+
+# ---------------------------------------------------------------------
+# 4. INTEREST PROFILE: used by the events extractor (LLM call 2)
+# ---------------------------------------------------------------------
+interests:
+  requirements:              # An event must meet ALL of these...
+    - "Held on campus"
+    - "Lasts one hour or less"
+  include:                   # ...AND be one of these
+    - "Cultural experiences (e.g. Halloween party, Día de los Muertos)"
+    - "Unique fun activities"
+    - "Talks by prominent visitors: mainly business leaders; senior government officials are fine"
+    - "High-quality, accessible AI or machine learning sessions (not deeply technical)"
+  exclude:                   # Never include these, even if they meet the requirements
+    - "Poetry"
+    - "Events about politics (a prominent official visiting to speak is fine)"
+    - "Admin trips (DMV, SSN)"
+    - "Everyday or leftover free-food events"
+    - "Anything where you have to make food"
+    - "Dances, gaming, raffles"
+    - "Off-campus trips"
+  exception: "Include a truly exceptional, possibly once-in-a-lifetime event even if it breaks the requirements"
+  when_unclear: "Leave it out. Missing an event costs little; a noisy digest costs time."
+  duration_unknown: "Judge from the event type: a talk is usually about an hour; a trip is longer"
