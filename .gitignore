@@ -12,7 +12,11 @@ __pycache__/
 # Mac system files
 .DS_Store
 
-# Login tokens we'll create in Phase 1
+# Login files: never commit
+# Google (Gmail): app ID card and mailbox key
+credentials.json
+token.json
+# Microsoft (possible calendar in Phase 5)
 token_cache.json
 
 # Your real emails and labeled test data stay local
