@@ -36,6 +36,12 @@ def apply_rules(record, config):
             if any(p.lower() in subject for p in phrases):
                 return canvas_type
         return None   # A Canvas email no phrase matched: let LLM call 1 decide (the safe default)
-
+    
+    # ---- Rule 3: replies to calendar invites you sent ----
+    # .startswith checks the beginning only, so "Accepted: Project sync" matches
+    # but "Re: offer accepted" doesn't. The subject is already lowercased above
+    for calendar_type, prefixes in rules.get("calendar_subject_prefixes", {}).items():
+        if any(subject.startswith(p.lower()) for p in prefixes):
+            return calendar_type
     # ---- No rule matched ----
     return None

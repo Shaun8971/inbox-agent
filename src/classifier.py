@@ -12,7 +12,7 @@ from src.llm_client import call_llm
 PROMPT_FILE = ROOT / "prompts" / "classifier.md"
 
 # Types only the rules can assign. The LLM may never return these
-RULE_ONLY_TYPES = {"event_newsletter", "canvas_routine", "canvas_prof_post", "canvas_due_dates"}
+RULE_ONLY_TYPES = {"event_newsletter", "canvas_routine", "canvas_prof_post", "canvas_due_dates", "calendar_accepted", "calendar_declined"}
 
 
 def _neutralize_tags(text):

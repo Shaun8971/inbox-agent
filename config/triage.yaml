@@ -38,7 +38,12 @@ rules:
       - "Submissions Posted"
       - "Grade"
       - "graded"
-
+  # Replies to calendar invites you sent, matched by how the subject STARTS (capitals ignored)
+  calendar_subject_prefixes:
+    calendar_accepted:
+      - "accepted:"
+    calendar_declined:
+      - "declined:"
 # ---------------------------------------------------------------------
 # 3. TYPES: what each type leads to
 #   action:   act           = stays unread in inbox + Telegram ping
@@ -65,6 +70,8 @@ types:
   account_alert:        {action: read,          extract: none,      telegram: digest_line}
   receipt_shipping:     {action: skip,          extract: none,      telegram: count}
   unsure:               {action: read,          extract: none,      telegram: digest_line}
+  calendar_accepted:    {action: skip,          extract: none,      telegram: count}
+  calendar_declined:    {action: read,          extract: none,      telegram: digest_line}
 
 # ---------------------------------------------------------------------
 # 4. INTEREST PROFILE: used by the events extractor (LLM call 2)
