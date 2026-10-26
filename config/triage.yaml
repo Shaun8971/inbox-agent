@@ -89,3 +89,10 @@ interests:
   exception: "Include a truly exceptional, possibly once-in-a-lifetime event even if it breaks the requirements"
   when_unclear: "Leave it out. Missing an event costs little; a noisy digest costs time."
   duration_unknown: "Judge from the event type: a talk is usually about an hour; a trip is longer"
+
+# ---------------------------------------------------------------------
+# 5. LLM SETTINGS
+# ---------------------------------------------------------------------
+llm:
+  model: "anthropic.claude-sonnet-5-5"   # The same model ID you used in 00_gateway_test.ipynb
+  classifier_max_tokens: 300       # Cap on the classifier's reply length (also caps cost)

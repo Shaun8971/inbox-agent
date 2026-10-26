@@ -99,20 +99,22 @@ def extract_body(payload):
 # FETCHING
 # =====================================================================
 
-def build_query(config):
-    """Build the Gmail search: unread inbox email, minus every excluded label in triage.yaml.
-    Excluded emails are filtered out by Gmail itself, so they're never even fetched."""
+def build_query(config, base="is:unread in:inbox"):
+    """Build a Gmail search: the base search, minus every excluded label in triage.yaml.
+    base defaults to unread inbox email (what the agent processes).
+    The eval passes a different base (e.g. all recent inbox email); exclusions always apply."""
     # Each excluded label becomes -label:"Name". The minus sign means "not"
     exclusions = " ".join(f'-label:"{name}"' for name in config.get("excluded_labels", []))
-    return f"is:unread in:inbox {exclusions}".strip()   # .strip() removes the trailing space if there are no exclusions
+    return f"{base} {exclusions}".strip()
 
-
-def fetch_unread(service, config, max_results=10):
-    """Fetch unread inbox emails (minus exclusions) as a list of clean dictionaries, one per email."""
+def fetch_unread(service, config, max_results=10, base="is:unread in:inbox"):
+    """Fetch emails as a list of clean dictionaries, one per email.
+    By default: unread inbox email. Pass a different base search for evaluation samples.
+    Excluded labels are always removed."""
 
     # Call 1 (LIST): IDs only, no content
     response = service.users().messages().list(
-        userId="me", q=build_query(config), maxResults=max_results
+        userId="me", q=build_query(config, base), maxResults=max_results
     ).execute()
     messages = response.get("messages", [])   # Missing key = nothing unread
 
