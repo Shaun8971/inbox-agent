@@ -95,7 +95,7 @@ interests:
     - "Dances, gaming, raffles"
     - "Off-campus trips"
   exception: "Include a truly exceptional, possibly once-in-a-lifetime event even if it breaks the requirements"
-  when_unclear: "Leave it out. Missing an event costs little; a noisy digest costs time."
+  when_unclear: "Include it, marked as maybe, so Shaunak can decide. A little noise is fine."
   duration_unknown: "Judge from the event type: a talk is usually about an hour; a trip is longer"
 
 # ---------------------------------------------------------------------
