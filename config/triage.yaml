@@ -69,6 +69,7 @@ types:
   dartmouth_notice:     {action: skip,          extract: none,      telegram: digest_line}
   account_alert:        {action: read,          extract: none,      telegram: digest_line}
   receipt_shipping:     {action: skip,          extract: none,      telegram: count}
+  optional_opportunity: {action: skip,          extract: none,      telegram: count}
   unsure:               {action: read,          extract: none,      telegram: digest_line}
   calendar_accepted:    {action: skip,          extract: none,      telegram: count}
   calendar_declined:    {action: read,          extract: none,      telegram: digest_line}

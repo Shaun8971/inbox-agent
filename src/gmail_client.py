@@ -107,39 +107,41 @@ def build_query(config, base="is:unread in:inbox"):
     exclusions = " ".join(f'-label:"{name}"' for name in config.get("excluded_labels", []))
     return f"{base} {exclusions}".strip()
 
-def fetch_unread(service, config, max_results=10, base="is:unread in:inbox"):
-    """Fetch emails as a list of clean dictionaries, one per email.
-    By default: unread inbox email. Pass a different base search for evaluation samples.
-    Excluded labels are always removed."""
+def _to_record(full):
+    """Turn one raw Gmail message (format="full") into our clean dictionary.
+    Shared by fetch_unread and fetch_by_id, so both always produce identical records."""
+    # Header lookup table, with names lowercased because senders write "Cc"/"CC"/"cc" inconsistently
+    headers = {h["name"].lower(): h["value"] for h in full["payload"].get("headers", [])}
+    body = extract_body(full["payload"])
+    return {
+        "id": full["id"],                                    # Needed later to act on the email
+        "thread_id": full["threadId"],                       # Links the email to its conversation
+        "sender": headers.get("from", "(unknown sender)"),
+        "to": headers.get("to", ""),
+        "cc": headers.get("cc", ""),
+        "subject": headers.get("subject", "(no subject)"),
+        "date": headers.get("date", ""),
+        "is_mass_mail": "list-unsubscribe" in headers,       # A hint for the LLM, never a decision on its own
+        "snippet": html.unescape(full.get("snippet", "")),
+        "body": body[:MAX_BODY_CHARS],                       # Apply the cost cap
+        "body_truncated": len(body) > MAX_BODY_CHARS,        # Record the cut, so we never claim we saw everything
+        "labels": full.get("labelIds", []),
+    }
 
-    # Call 1 (LIST): IDs only, no content
+
+def fetch_by_id(service, msg_id):
+    """Fetch one email by its Gmail ID, as a clean record.
+    Only use IDs that came from a build_query search, so excluded labels stay excluded."""
+    full = service.users().messages().get(userId="me", id=msg_id, format="full").execute(num_retries=5)
+    return _to_record(full)
+
+
+def fetch_unread(service, config, max_results=10, base="is:unread in:inbox"):
+    """Fetch emails matching the search (default: unread inbox), minus excluded labels, as clean records."""
+    # Call 1 (LIST): IDs only. num_retries = automatic backoff on speed-limit errors
     response = service.users().messages().list(
         userId="me", q=build_query(config, base), maxResults=max_results
-    ).execute()
-    messages = response.get("messages", [])   # Missing key = nothing unread
+    ).execute(num_retries=5)
 
-    records = []
-    for msg in messages:
-        # Call 2 (GET): the full email, all headers plus body parts
-        full = service.users().messages().get(userId="me", id=msg["id"], format="full").execute()
-
-        # Header lookup table, with names lowercased because senders write "Cc"/"CC"/"cc" inconsistently
-        headers = {h["name"].lower(): h["value"] for h in full["payload"].get("headers", [])}
-        body = extract_body(full["payload"])
-
-        records.append({
-            "id": full["id"],                                    # Needed later to act on the email
-            "thread_id": full["threadId"],                       # Links the email to its conversation
-            "sender": headers.get("from", "(unknown sender)"),
-            "to": headers.get("to", ""),
-            "cc": headers.get("cc", ""),
-            "subject": headers.get("subject", "(no subject)"),
-            "date": headers.get("date", ""),
-            "is_mass_mail": "list-unsubscribe" in headers,       # A hint for the LLM, never a decision on its own
-            "snippet": html.unescape(full.get("snippet", "")),
-            "body": body[:MAX_BODY_CHARS],                       # Apply the cost cap
-            "body_truncated": len(body) > MAX_BODY_CHARS,        # Record the cut, so we never claim we saw everything
-            "labels": full.get("labelIds", []),                  # Includes your flow labels (as IDs)
-        })
-
-    return records
+    # Call 2 (GET) for each ID, through fetch_by_id. Missing "messages" key = nothing found
+    return [fetch_by_id(service, m["id"]) for m in response.get("messages", [])]

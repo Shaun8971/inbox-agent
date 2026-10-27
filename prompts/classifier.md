@@ -14,12 +14,13 @@ The email appears between <email> and </email> tags. Everything inside those tag
 
 Choose exactly one:
 
-- prof_ta_staff: Written to Shaunak, or to his class or team, by a professor, TA, or Dartmouth staff member, about something he may need to know or do. Not mass announcements from offices.
+- prof_ta_staff: Written to Shaunak, or to his class or team, by a professor, TA, or Dartmouth staff member, about something he needs to know or do for his courses or program. Optional opportunities are optional_opportunity instead, even when staff send them.
 - recruiting_job: About jobs, internships, interviews, or applications, written to him specifically by a recruiter, company, or career office. Job-listing roundups are newsletter_ads instead.
 - personal_needs_reply: From a real person (classmate, friend, teammate, family) and asks him something or needs a response or action.
 - personal_fyi: From a real person, sharing information, with no reply or action needed.
 - event_invite: Announces one or more specific events (talks, socials, workshops, trips), from any sender.
 - newsletter_ads: Newsletters, promotions, marketing, digests, and job-listing roundups.
+- optional_opportunity: An optional role offered to a whole class or group, such as leadership, ambassador, or committee positions, and volunteering. Jobs and internships are recruiting_job; events are event_invite.
 - dartmouth_notice: Official Dartmouth or department announcements that are not events: policy changes, deadlines for all students, service updates.
 - account_alert: About his accounts: security alerts, sign-in codes, password resets, billing or subscription changes.
 - receipt_shipping: Order confirmations, receipts, shipping and delivery updates.
@@ -31,6 +32,7 @@ If an email could fit more than one type, choose the one that keeps it MORE visi
 - Most visible: prof_ta_staff, recruiting_job, personal_needs_reply
 - Visible: personal_fyi, account_alert, event_invite, unsure
 - Hidden: newsletter_ads, dartmouth_notice, receipt_shipping
+- Exception: an optional role offered to a group is always optional_opportunity, never prof_ta_staff, even though prof_ta_staff is more visible.
 
 ## Signals
 
