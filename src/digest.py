@@ -18,7 +18,7 @@ def _name(sender):
 
 def build_digest(items):
     """Turn decided items into (digest_text, number_map). number_map links each number to its email ID."""
-    sections = {"ACT (still unread)": [], "READ": [], "EVENTS": [], "FYI (archived)": []}
+    sections = {"ACT (still unread)": [], "READ": [], "DUE SOON": [], "EVENTS": [], "FYI (archived)": []}
     number_map = {}
     n = 0   # One running number across all sections, so every line has a unique #
 
@@ -47,6 +47,10 @@ def build_digest(items):
             reg = f" · register by {e['register_by']}" if e["register_by"] else ""
             ask = "  interested?" if e["fit"] == "maybe" else ""
             add("EVENTS", f"{mark} {e['title']} · {details}{reg}{ask}", it["id"])
+
+        # Due dates from Canvas summaries, each numbered, so Phase 5 can say "add #7 to calendar"
+        for d in it.get("due", []):   # .get: an item without a "due" field just has none
+            add("DUE SOON", f"{d['course']}: {d['title']} · due {d['due']}", it["id"])
 
     # ---- Assemble the message: header, the non-empty sections, then the skipped count by type ----
     lines = [f"📬 Inbox digest · {datetime.now().strftime('%a %-I:%M %p')}"]   # e.g. Tue 2:00 PM

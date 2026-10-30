@@ -77,3 +77,50 @@ def extract_events(record, config, client):
                           max_tokens=config["llm"].get("extractor_max_tokens", 600))   # Default 600 if not in config
     events, valid = _parse_events(text)
     return {"events": events, "valid": valid, "info": info, "raw_reply": text}
+
+GIST_PROMPT = ROOT / "prompts" / "gist.md"
+
+def extract_gist(record, config, client):
+    """LLM call 2 for emails that need a one-line summary (e.g. Canvas professor posts).
+    Returns: gist (text), valid (False = unusable reply), info, raw_reply."""
+    text, info = call_llm(client, config["llm"]["model"], system=GIST_PROMPT.read_text(),
+                          user=_format_email(record), max_tokens=200)
+
+    # Same checking approach as the other extractors: find the outermost { }, then read it as JSON
+    gist, valid = "", False
+    start, end = text.find("{"), text.rfind("}")
+    if start != -1 and end > start:
+        try:
+            data = json.loads(text[start:end + 1])
+            if isinstance(data, dict) and data.get("gist"):
+                gist, valid = _strip_links(str(data["gist"]))[:200], True   # Link-free, 200 characters max
+        except json.JSONDecodeError:
+            pass   # Unusable reply: gist stays empty and valid stays False
+    return {"gist": gist, "valid": valid, "info": info, "raw_reply": text}
+
+DUE_PROMPT = ROOT / "prompts" / "due_dates.md"
+DUE_FIELDS = ["course", "title", "due", "due_iso"]   # The only fields we keep
+MAX_DUE_ITEMS = 15                                    # Hard cap per summary email
+
+
+def extract_due_dates(record, config, client):
+    """LLM call 2 for Canvas due-date summaries. Returns: items (list), valid, info, raw_reply.
+    due_iso is a machine-readable date for the calendar; it's validated properly in Phase 5."""
+    system = _fill(DUE_PROMPT.read_text(), {"today": datetime.now().strftime("%A, %B %d, %Y")})
+    text, info = call_llm(client, config["llm"]["model"], system=system, user=_format_email(record),
+                          max_tokens=config["llm"].get("extractor_max_tokens", 600))
+
+    # Same checking approach: outermost { }, read as JSON, keep only well-formed items with a title
+    items, valid = [], False
+    start, end = text.find("{"), text.rfind("}")
+    if start != -1 and end > start:
+        try:
+            data = json.loads(text[start:end + 1])
+            if isinstance(data, dict) and isinstance(data.get("items"), list):
+                valid = True
+                for d in data["items"][:MAX_DUE_ITEMS]:
+                    if isinstance(d, dict) and d.get("title"):
+                        items.append({f: _strip_links(str(d.get(f, "")))[:150] for f in DUE_FIELDS})
+        except json.JSONDecodeError:
+            pass   # Unusable reply: no items, valid stays False
+    return {"items": items, "valid": valid, "info": info, "raw_reply": text}

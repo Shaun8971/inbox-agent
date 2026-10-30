@@ -15,8 +15,9 @@ from googleapiclient.discovery import build
 
 from src.config import CREDENTIALS_FILE, TOKEN_FILE   # Paths now come from one place
 
-# The permission we ask Google for. Read-only until Phase 4 (least privilege)
-SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+# Read, label, mark as read, and archive. This permission technically also allows sending,
+# which is why our code contains no send function at all: the guard lives in code
+SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 # Max characters of body kept per email (~2,000 tokens). Older quoted replies sit at the bottom, so they're cut first
 MAX_BODY_CHARS = 8000

@@ -1,9 +1,10 @@
 """The triage pipeline: runs each email through rules, the classifier, and the extractors,
 and returns one decided item per email. Read-only: it changes nothing in Gmail (that's Phase 4)."""
 from src.classifier import classify
-from src.extractors import extract_events
+from src.extractors import extract_events, extract_gist, extract_due_dates
 from src.gmail_client import fetch_unread
 from src.rules import apply_rules
+from src.state import is_new
 
 
 def triage_one(record, config, client):
@@ -18,6 +19,7 @@ def triage_one(record, config, client):
 
     settings = config["types"][etype]   # This type's row in triage.yaml: action, extract, telegram
     events = []
+    due = []
 
     # ---- Layer 3: extractors, only for types that need one ----
     if settings["extract"] == "events":
@@ -25,9 +27,14 @@ def triage_one(record, config, client):
         events = ex["events"]
         valid = valid and ex["valid"]   # One unusable reply anywhere marks the whole item as invalid
     elif settings["extract"] == "gist":
-        gist = record["snippet"]        # TEMPORARY: replaced by an LLM gist in the next piece
-    # due_dates: added in a later piece
-
+        ex = extract_gist(record, config, client)
+        gist = ex["gist"] or record["snippet"]   # If the reply was unusable, fall back to Gmail's preview
+        valid = valid and ex["valid"]    
+    elif settings["extract"] == "due_dates":
+        ex = extract_due_dates(record, config, client)
+        due = ex["items"]
+        valid = valid and ex["valid"]   # If extraction fails, the safety rule keeps the summary visible
+    
     # ---- Resolve the final action ----
     action = settings["action"]
     if action == "read_if_match":
@@ -38,10 +45,13 @@ def triage_one(record, config, client):
     return {
         "id": record["id"], "sender": record["sender"], "subject": record["subject"],
         "type": etype, "source": source, "action": action, "telegram": settings["telegram"],
-        "gist": gist, "events": events, "valid": valid,
+        "gist": gist, "events": events, "valid": valid, "due": due,
     }
 
-
-def triage(service, client, config, max_results=25):
-    """Fetch unread email (minus exclusions) and decide each one. Returns a list of decided items."""
-    return [triage_one(r, config, client) for r in fetch_unread(service, config, max_results=max_results)]
+def triage(service, client, config, max_results=25, state=None):
+    """Fetch unread email (minus exclusions) and decide each one.
+    If state is given, emails handled in an earlier run are dropped BEFORE any LLM call."""
+    records = fetch_unread(service, config, max_results=max_results)
+    if state is not None:
+        records = [r for r in records if is_new(state, r["id"])]   # Keep only emails not seen before
+    return [triage_one(r, config, client) for r in records]
