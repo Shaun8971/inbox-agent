@@ -17,7 +17,7 @@ from src.state import load_state, mark_processed, save_state
 from src.telegram_client import send_message
 
 
-def run(live=False, max_results=25):
+def run(live=False, max_results=25, quiet = False):
     """Run the agent once. live=False (the default) is shadow mode."""
     config = load_config()
     service, client = get_service(), get_client()
@@ -30,13 +30,16 @@ def run(live=False, max_results=25):
     # 2. Act on Skip emails. In a dry run, this only reports what it would do
     apply_actions(service, items, dry_run=not live)
 
-    # 3. One ping per Act email, sent first so the important ones arrive on top
-    for it in items:
-        if it["telegram"] == "ping":
-            send_message(f"{tag}🔔 {_name(it['sender'])}: {it['gist'] or it['subject']}")
+    # 3. One ping per Act email, sent first so the important ones arrive on top.
+    #    quiet=True (for clearing a backlog): no pings; Act emails go into the digest instead
+    if not quiet:
+        for it in items:
+            if it["telegram"] == "ping":
+                send_message(f"{tag}🔔 {_name(it['sender'])}: {it['gist'] or it['subject']}")
 
-    # 4. One digest for everything else, sent only if it has at least one numbered line
-    text, number_map = build_digest([it for it in items if it["telegram"] != "ping"])
+    # 4. One digest, sent only if it has at least one numbered line
+    digest_items = items if quiet else [it for it in items if it["telegram"] != "ping"]
+    text, number_map = build_digest(digest_items)
     if number_map:
         send_message(tag + text)
         save_number_map(number_map)
@@ -61,10 +64,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the inbox agent once.")
     parser.add_argument("--live", action="store_true", help="Apply actions and remember handled emails")
     parser.add_argument("--max", type=int, default=25, help="Most unread emails to look at per run")
+    parser.add_argument("--quiet", action="store_true", help="No pings: use when clearing a backlog")
     args = parser.parse_args()
 
     try:
-        run(live=args.live, max_results=args.max)
+        run(live=args.live, max_results=args.max, quiet=args.quiet)
     except Exception as e:
         # Monitoring: a failed scheduled run tells you on Telegram instead of failing silently
         send_message(f"⚠️ Inbox agent run failed: {type(e).__name__}: {str(e)[:300]}")

@@ -56,7 +56,9 @@ def build_digest(items):
     lines = [f"📬 Inbox digest · {datetime.now().strftime('%a %-I:%M %p')}"]   # e.g. Tue 2:00 PM
     for title, entries in sections.items():
         if entries:
-            lines += ["", title] + entries   # "" adds a blank line before each section
+            lines += ["", "_________________", title] + entries   # "" adds a blank line before each section
+            for entry in entries:
+                lines += ["", entry]                   # A blank line before every item, so each stands apart
     skipped = Counter(it["type"].replace("_", " ") for it in items if it["action"] == "skip")
     if skipped:
         breakdown = ", ".join(f"{t} {c}" for t, c in skipped.most_common())

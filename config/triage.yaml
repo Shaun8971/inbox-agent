@@ -104,3 +104,13 @@ interests:
 llm:
   model: "anthropic.claude-sonnet-5-5"   # The same model ID you used in 00_gateway_test.ipynb
   classifier_max_tokens: 300       # Cap on the classifier's reply length (also caps cost)
+
+# ---------------------------------------------------------------------
+# 6. NEVER SKIP: a safety net. Matching emails are never archived, whatever their type says.
+#    They stay unread in the inbox and appear in the digest's READ section.
+# ---------------------------------------------------------------------
+never_skip:
+  senders:              # Exact addresses only (the part inside < >)
+    - "engineering.career.services@dartmouth.edu"
+  subject_keywords:     # Matched if the word appears anywhere in the subject (capitals ignored)
+    - "hackathon"

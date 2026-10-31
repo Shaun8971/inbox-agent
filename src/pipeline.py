@@ -5,7 +5,16 @@ from src.extractors import extract_events, extract_gist, extract_due_dates
 from src.gmail_client import fetch_unread
 from src.rules import apply_rules
 from src.state import is_new
+from src.rules import _address
 
+def _is_protected(record, config):
+    """True if the email matches the never_skip list in triage.yaml, by sender address or subject keyword."""
+    protect = config.get("never_skip", {})   # An empty list if the section is missing
+    sender = _address(record["sender"])
+    subject = record["subject"].lower()
+    by_sender = sender in [s.lower() for s in protect.get("senders", [])]
+    by_keyword = any(k.lower() in subject for k in protect.get("subject_keywords", []))
+    return by_sender or by_keyword
 
 def triage_one(record, config, client):
     """Decide one email: its type, who decided, the final action, and anything extracted for the digest."""
@@ -35,17 +44,23 @@ def triage_one(record, config, client):
         due = ex["items"]
         valid = valid and ex["valid"]   # If extraction fails, the safety rule keeps the summary visible
     
-    # ---- Resolve the final action ----
+        # ---- Resolve the final action ----
     action = settings["action"]
+    telegram = settings["telegram"]
     if action == "read_if_match":
         action = "read" if events else "skip"   # Keep it only if the extractor found a matching event
     if not valid:
         action = "read"   # Safety rule: an unusable reply never gets an email archived
 
+    # ---- Safety net: protected senders and keywords are never archived ----
+    # They stay unread, and appear in the digest's READ section so you actually see them
+    if action == "skip" and _is_protected(record, config):
+        action, telegram = "read", "digest_line"
+
     return {
         "id": record["id"], "sender": record["sender"], "subject": record["subject"],
-        "type": etype, "source": source, "action": action, "telegram": settings["telegram"],
-        "gist": gist, "events": events, "valid": valid, "due": due,
+        "type": etype, "source": source, "action": action, "telegram": telegram,
+        "gist": gist, "events": events, "due": due, "valid": valid,
     }
 
 def triage(service, client, config, max_results=25, state=None):
